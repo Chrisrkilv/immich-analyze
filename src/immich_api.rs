@@ -4,7 +4,7 @@ use crate::{
     utils::{default_headers, format_error_chain},
 };
 use bytes::Bytes;
-use log::{info, warn};
+use log::{debug, info, warn};
 use reqwest::{Client, StatusCode, header::HeaderValue};
 use serde::Deserialize;
 use std::time::{Duration, Instant};
@@ -25,6 +25,8 @@ pub struct AssetResponse {
     pub id: String,
     #[serde(default)]
     pub exif_info: Option<ExifInfo>,
+    #[serde(default)]
+    pub thumbhash: Option<String>,
 }
 
 /// Person info from Immich API (subset of `PersonWithFacesResponseDto`).
@@ -267,14 +269,15 @@ impl ApiProvider {
         }
     }
 
-    /// Fetches all assets from the Immich library.
+    /// Fetches the analyzable assets from the Immich library.
     ///
     /// Calls `POST /api/search/metadata` (requires `asset.read` permission).
+    /// Assets whose `thumbhash` is missing are skipped.
     /// Fully paginates each API key separately (multi-user support).
     /// Tries all keys for each page request on failure.
     ///
     /// # Returns
-    /// `Vec<AssetRef>` containing all assets with their ID and original path.
+    /// `Vec<AssetRef>` containing the IDs of the analyzable assets.
     ///
     /// # Errors
     /// Returns [`AnalysisError::InvalidConfig`] when the search URL cannot be built,
@@ -286,11 +289,12 @@ impl ApiProvider {
         self.search_assets_paginated(None).await
     }
 
-    /// Fetches assets created after a specific timestamp from the Immich library.
+    /// Fetches the analyzable assets created after a specific timestamp from the Immich library.
     ///
     /// Calls `POST /api/search/metadata` (requires `asset.read` permission).
     /// Uses the `createdAfter` filter to retrieve only assets added to Immich
     /// after the specified date. This is useful for incremental polling in monitor mode.
+    /// Assets whose `thumbhash` is missing are skipped.
     /// Fully paginates each API key separately (multi-user support).
     /// Tries all keys for each page request on failure.
     ///
@@ -300,7 +304,7 @@ impl ApiProvider {
     ///   will be included in the results.
     ///
     /// # Returns
-    /// `Vec<AssetRef>` containing assets created after the specified timestamp.
+    /// `Vec<AssetRef>` containing the analyzable assets created after the specified timestamp.
     ///
     /// # Errors
     /// Returns [`AnalysisError::InvalidConfig`] when the search URL cannot be built,
@@ -330,11 +334,13 @@ impl ApiProvider {
     /// Shared paginated search across all clients.
     ///
     /// Calls `POST /api/search/metadata` (requires `asset.read` permission).
+    /// Assets whose `thumbhash` is missing are skipped.
     async fn search_assets_paginated(
         &self,
         since: Option<String>,
     ) -> Result<Vec<AssetRef>, AnalysisError> {
         let mut all_assets = Vec::new();
+        let mut skipped = 0_usize;
 
         let search_url = self.base_url.join("/api/search/metadata").map_err(|err| {
             AnalysisError::InvalidConfig {
@@ -399,6 +405,12 @@ impl ApiProvider {
                 }
 
                 for item in search_result.assets.items {
+                    if item.thumbhash.is_none_or(|hash| hash.is_empty()) {
+                        skipped = skipped.saturating_add(1);
+                        debug!("Skipping asset {} without a generated thumbnail", item.id);
+                        continue;
+                    }
+
                     let asset_id =
                         Uuid::parse_str(&item.id).map_err(|_| AnalysisError::InvalidUuid {
                             asset_id: item.id.clone(),
@@ -412,6 +424,10 @@ impl ApiProvider {
                 }
                 page = page.saturating_add(1);
             }
+        }
+
+        if skipped > 0 {
+            info!("Skipped {skipped} asset(s) without a generated thumbnail");
         }
 
         Ok(all_assets)
