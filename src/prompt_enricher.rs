@@ -293,6 +293,7 @@ pub async fn enrich_prompt_if_needed(
             let people_with_ages: Vec<(String, Option<u32>)> = metadata
                 .people
                 .iter()
+                .filter(|person| person.is_named_and_visible())
                 .map(|person| {
                     let age = calculate_age(person.birth_date.as_deref(), photo_date);
                     (person.name.clone(), age)

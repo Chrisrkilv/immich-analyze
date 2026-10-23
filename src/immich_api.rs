@@ -36,6 +36,16 @@ pub struct PersonInfo {
     pub name: String,
     #[serde(default)]
     pub birth_date: Option<String>,
+    #[serde(default)]
+    pub is_hidden: bool,
+}
+
+impl PersonInfo {
+    /// Unnamed face clusters come back with an empty name; hidden people are still listed.
+    #[must_use]
+    pub fn is_named_and_visible(&self) -> bool {
+        !self.is_hidden && !self.name.trim().is_empty()
+    }
 }
 
 /// Tag info from Immich API (subset of `TagResponseDto`).

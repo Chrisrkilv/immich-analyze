@@ -138,6 +138,30 @@ fn asset_metadata_is_read_from_a_full_immich_payload() {
 }
 
 #[test]
+fn only_named_and_visible_people_are_kept_for_the_prompt() {
+    let metadata: AssetMetadata = serde_json::from_str(
+        r#"{
+            "people": [
+                { "name": "Ann", "isHidden": false },
+                { "name": "", "isHidden": false },
+                { "name": "   " },
+                { "name": "Ex", "isHidden": true },
+                { "name": "Guest" }
+            ]
+        }"#,
+    )
+    .expect("people payload deserializes");
+
+    let kept: Vec<&str> = metadata
+        .people
+        .iter()
+        .filter(|person| person.is_named_and_visible())
+        .map(|person| person.name.as_str())
+        .collect();
+    assert_eq!(kept, ["Ann", "Guest"]);
+}
+
+#[test]
 fn missing_metadata_fields_fall_back_to_empty_values() {
     let metadata: AssetMetadata =
         serde_json::from_str(r#"{"originalFileName": "photo.jpg"}"#).expect("partial payload");

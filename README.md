@@ -18,7 +18,7 @@ The application uses the Immich API (requires `IMMICH_API_URL` + `IMMICH_API_KEY
 - Configurable retry logic with max retries and delay between attempts
 - Internationalization support (English and Russian)
 - Docker container support
-- Prompt enrichment: optionally enrich AI prompts with asset metadata (EXIF, location, camera info, people with ages, tags, resolution, MIME type)
+- Prompt enrichment: optionally enrich AI prompts with asset metadata (EXIF, location, camera info, named people with ages, tags, resolution, MIME type)
 - Selective description updates: use `--preserve-human` with any overwrite policy to preserve human-written text outside `[AI]...[/AI]` blocks; use `--overwrite-policy missing-ai` to process only assets without existing AI blocks
 - Structured logging via `env_logger` (configure with `RUST_LOG` environment variable)
 - Wait for Immich to become available on startup (configurable timeout)
@@ -401,7 +401,7 @@ The API key used must have the following permissions enabled in the Immich admin
   - Non-retryable errors (invalid UUID, empty response, JSON parsing) fail immediately
   - Permanent provider rejections (e.g. a content-policy block returning `{"error":{"code":400,"message":"...PROHIBITED_CONTENT..."}}`) fail immediately, surface the provider's actual reason in the log, and are recorded as an `[AI] IMMICH-ANALYZE:BLOCKED: <reason> [/AI]` marker description so they are not re-attempted on subsequent runs
 - Host unavailability tracking with configurable recovery duration
-- Prompt enrichment: optionally enrich AI prompts with asset metadata (EXIF metadata, location, camera info, recognized people with ages, tags, resolution, MIME type) via the Immich API for more detailed descriptions
+- Prompt enrichment: optionally enrich AI prompts with asset metadata (EXIF metadata, location, camera info, recognized people with ages, tags, resolution, MIME type) via the Immich API for more detailed descriptions. Only people you have named in Immich are included; unnamed faces and hidden people are left out
 - Selective description preservation: when using `--preserve-human`, only the `[AI]...[/AI]` block in the description is replaced, preserving any human-written text outside this block. If no `[AI]...[/AI]` block exists, the AI-generated block is appended to the existing description
 - Overwrite policies: use `--overwrite-policy all` to process everything, `--overwrite-policy none` to skip existing (default), or `--overwrite-policy missing-ai` to skip only assets with an existing `[AI]...[/AI]` block (processes human-only and empty descriptions)
 - Structured logging via `env_logger` for easier debugging and monitoring
