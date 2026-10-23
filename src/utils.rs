@@ -243,10 +243,14 @@ pub async fn build_final_description(
 
     let re = get_ai_block_pattern();
     if re.is_match(&existing) {
-        Ok(re
-            .replace(&existing, format!("\n{ai_wrapped}\n"))
-            .trim()
-            .to_owned())
+        let mut parts = re.splitn(&existing, 2);
+        let before = parts.next().unwrap_or_default().trim();
+        let after = parts.next().unwrap_or_default().trim();
+        Ok([before, ai_wrapped.as_str(), after]
+            .into_iter()
+            .filter(|part| !part.is_empty())
+            .collect::<Vec<_>>()
+            .join("\n\n"))
     } else {
         Ok(format!("{}\n\n{}", existing.trim(), ai_wrapped))
     }

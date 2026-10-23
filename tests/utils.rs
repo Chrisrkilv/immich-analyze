@@ -397,6 +397,28 @@ async fn build_final_description_replaces_an_existing_ai_block() {
 }
 
 #[tokio::test]
+async fn build_final_description_is_stable_across_reruns() {
+    let mut description = "Human note\n\n[AI]\nold text\n[/AI]\n\nTrailing note".to_owned();
+
+    for _ in 0_u8..3_u8 {
+        description = build_final_description(
+            &analysis("new text"),
+            &unreachable_provider(),
+            true,
+            Some(description),
+            false,
+        )
+        .await
+        .expect("no lookup needed");
+    }
+
+    assert_eq!(
+        description,
+        "Human note\n\n[AI]\nnew text\n[/AI]\n\nTrailing note"
+    );
+}
+
+#[tokio::test]
 async fn build_final_description_appends_when_there_is_no_ai_block() {
     let description = build_final_description(
         &analysis("new text"),
