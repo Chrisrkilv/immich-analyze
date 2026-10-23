@@ -1,4 +1,4 @@
-use crate::config::ProcessingContext;
+use crate::{config::ProcessingContext, utils::get_ai_block_pattern};
 use chrono::{Datelike as _, NaiveDate};
 use log::warn;
 use uuid::Uuid;
@@ -235,10 +235,12 @@ impl PromptContext {
             context_parts.push(format!("Original filename: {name}"));
         }
 
-        if let Some(desc) = &self.exif_description
-            && !desc.is_empty()
-        {
-            context_parts.push(format!("Existing description: {desc}"));
+        if let Some(desc) = &self.exif_description {
+            let without_ai = get_ai_block_pattern().replace_all(desc, "");
+            let human_text = without_ai.trim();
+            if !human_text.is_empty() {
+                context_parts.push(format!("Existing description: {human_text}"));
+            }
         }
 
         if context_parts.is_empty() {

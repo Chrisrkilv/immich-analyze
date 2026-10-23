@@ -128,6 +128,22 @@ fn an_empty_exif_description_is_not_repeated_back() {
 }
 
 #[test]
+fn a_previous_ai_block_is_not_sent_back_as_existing_description() {
+    let ai_only = PromptContext::new(BASE_PROMPT)
+        .with_exif_description(Some("[AI]\nA dog on a beach.\n[/AI]".to_owned()))
+        .build_enriched_prompt();
+    let mixed = PromptContext::new(BASE_PROMPT)
+        .with_exif_description(Some(
+            "Holiday in Lisbon\n\n[AI]\nA dog on a beach.\n[/AI]".to_owned(),
+        ))
+        .build_enriched_prompt();
+
+    assert_eq!(ai_only, BASE_PROMPT);
+    assert!(mixed.contains("Existing description: Holiday in Lisbon"));
+    assert!(!mixed.contains("A dog on a beach."));
+}
+
+#[test]
 fn the_full_context_is_assembled_in_a_stable_order() {
     let prompt = PromptContext::new(BASE_PROMPT)
         .with_file_info(Some("IMG_0001.HEIC".to_owned()), Some("IMAGE".to_owned()))
