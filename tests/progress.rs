@@ -6,7 +6,7 @@ fn the_indicator_starts_empty_and_tracks_the_finish_message() {
 
     assert_eq!(indicator.total, 3);
     assert_eq!(indicator.current, 0);
-    assert!(indicator.current_message.is_empty());
+    assert_eq!(indicator.current_message, "");
     assert_eq!(indicator.finish_message, "All done");
 }
 

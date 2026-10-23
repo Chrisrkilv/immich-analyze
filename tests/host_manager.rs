@@ -35,7 +35,10 @@ fn model_lists_are_read_from_the_interface_specific_field() {
         Interface::OpenRouter.model_names(&openai),
         ["vendor/qwen3-vl"]
     );
-    assert!(Interface::Ollama.model_names(&json!({})).is_empty());
+    assert_eq!(
+        Interface::Ollama.model_names(&json!({})),
+        Vec::<String>::new()
+    );
 }
 
 #[test]
